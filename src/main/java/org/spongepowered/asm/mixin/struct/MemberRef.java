@@ -27,6 +27,7 @@ package org.spongepowered.asm.mixin.struct;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.spongepowered.asm.mixin.transformer.ClassInfo;
 import org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError;
 import org.spongepowered.asm.util.Bytecode;
 import org.spongepowered.asm.util.Handles;
@@ -329,6 +330,15 @@ public abstract class MemberRef {
      * @param desc New descriptor of this member
      */
     public abstract void setDesc(String desc);
+
+    /**
+     * Whether the owner of this member is a mixin.
+     * @return Whether the owner of this member is a mixin.
+     */
+    public boolean ownerIsMixin() {
+        String owner = getOwner();
+        return !owner.startsWith("[") && ClassInfo.forName(owner).isMixin();
+    }
 
     @Override
     public String toString() {
