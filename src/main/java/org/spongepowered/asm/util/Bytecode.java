@@ -30,9 +30,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 
+import com.google.common.collect.Iterators;
 import org.objectweb.asm.Attribute;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -1249,6 +1249,22 @@ public final class Bytecode {
     }
 
     /**
+     * Iterator over the instructions of a method, skipping pseudo-instructions
+     * (labels, line numbers and frames). Java 6 compatible replacement for
+     * <tt>Iterators.filter(insns.iterator(), Bytecode::isRealInsn)</tt>.
+     */
+    private static Iterator<AbstractInsnNode> realInsnIterator(MethodNode method) {
+        List<AbstractInsnNode> insns = new ArrayList<AbstractInsnNode>();
+        for (Iterator<AbstractInsnNode> iter = method.instructions.iterator(); iter.hasNext();) {
+            AbstractInsnNode insn = iter.next();
+            if (Bytecode.isRealInsn(insn)) {
+                insns.add(insn);
+            }
+        }
+        return insns.iterator();
+    }
+
+    /**
      * Compares two synthetic bridge methods and throws an exception if they are
      * not compatible.
      * 
@@ -1256,16 +1272,13 @@ public final class Bytecode {
      * @param b Incoming method
      */
     public static void compareBridgeMethods(MethodNode a, MethodNode b) {
-        ListIterator<AbstractInsnNode> ia = a.instructions.iterator();
-        ListIterator<AbstractInsnNode> ib = b.instructions.iterator();
+        Iterator<AbstractInsnNode> ia = Bytecode.realInsnIterator(a);
+        Iterator<AbstractInsnNode> ib = Bytecode.realInsnIterator(b);
         
         int index = 0;
         for (; ia.hasNext() && ib.hasNext(); index++) {
             AbstractInsnNode na = ia.next();
             AbstractInsnNode nb = ib.next();
-            if (na instanceof LabelNode) {
-                continue;
-            } 
             
             if (na instanceof MethodInsnNode) {
                 MethodInsnNode ma = (MethodInsnNode)na;
@@ -1292,9 +1305,16 @@ public final class Bytecode {
             }
         }
         
-        if (ia.hasNext() || ib.hasNext()) {
-            throw new SyntheticBridgeException(Problem.BAD_LENGTH, a.name, a.desc, index, null, null);
+        if (ia.hasNext()) {
+            throw new SyntheticBridgeException(Problem.BAD_LENGTH, a.name, a.desc, index, ia.next(), null);
         }
+        if (ib.hasNext()) {
+            throw new SyntheticBridgeException(Problem.BAD_LENGTH, a.name, a.desc, index, null, ib.next());
+        }
+    }
+
+    private static boolean isRealInsn(AbstractInsnNode insn) {
+        return insn.getOpcode() != -1;
     }
 
     /**
