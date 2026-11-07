@@ -206,10 +206,7 @@ public class CallbackInjector extends Injector {
             this.invoke = target.extendStack();
             this.ctor = target.extendStack();
 
-            this.invoke.add(target.arguments.length);
-            if (this.canCaptureLocals) {
-                this.invoke.add(this.localTypes.length - this.frameSize);
-            }
+            this.invoke.add().add(handlerArgs);
         }
 
         /**
